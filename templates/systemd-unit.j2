@@ -1,0 +1,25 @@
+[Unit]
+Description=mongodb exporter
+
+[Service]
+Type=forking
+User={{ mongodb_exporter_user_name }}
+Group={{ mongodb_exporter_user_name }}
+RuntimeDirectory=mongodb_exporter
+RuntimeDirectoryMode=0755
+EnvironmentFile={{ mongodb_exporter_dirs.config_dir }}/{{ mongodb_exporter_config_file }}
+{% if ansible_distribution_release == 'focal' %}
+PIDFile=/run/mongodb_exporter/pid
+{% else %}
+PIDFile=/var/run/mongodb_exporter/pid
+{% endif %}
+ExecStart=/sbin/start-stop-daemon -Sbmp /var/run/mongodb_exporter/pid -x {{ mongodb_exporter_dirs.binary_dir }}/mongodb_exporter
+
+Restart=always
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=mongodb_exporter
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+---
+
+- name: reload mongodb_exporter unit
+  systemd:
+    daemon_reload: true
+
+- name: restart mongodb_exporter service
+  systemd:
+    name: "{{ mongodb_exporter_service_name }}"
+    state: restarted

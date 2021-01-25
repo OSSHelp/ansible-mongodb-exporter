@@ -1,0 +1,67 @@
+---
+
+- name: create user
+  user:
+    name: "{{ mongodb_exporter_user_name }}"
+    home: "/nonexistent"
+    create_home: no
+    shell: "/bin/false"
+    system: yes
+
+- name: check if binary file exists
+  stat:
+    path: "{{ mongodb_exporter_dirs.binary_dir }}/{{ mongodb_exporter_binary_name }}"
+  register: binary_file
+
+- name: download an archive
+  get_url:
+    url: "{{ mongodb_exporter_targz_url }}"
+    dest: "/tmp/{{ mongodb_exporter_service_name }}-{{ mongodb_exporter_version }}.linux-amd64.tar.gz"
+    checksum: "{{ mongodb_exporter_targz_sums }}"
+  when: not binary_file.stat.exists
+
+- name: "extract binary to {{ mongodb_exporter_dirs.binary_dir }}"
+  unarchive:
+    src: "/tmp/{{ mongodb_exporter_service_name }}-{{ mongodb_exporter_version }}.linux-amd64.tar.gz"
+    dest: "{{ mongodb_exporter_dirs.binary_dir }}"
+    owner: root
+    group: root
+    remote_src: yes
+    extra_opts:
+      - "{{ mongodb_exporter_service_name }}"
+  when: not binary_file.stat.exists
+
+- name: remove an archive
+  file:
+    path: "/tmp/{{ mongodb_exporter_service_name }}-{{ mongodb_exporter_version }}.linux-amd64.tar.gz"
+    state: absent
+  when: not binary_file.stat.exists
+
+- name: create systemd unit
+  template:
+    src: systemd-unit.j2
+    dest: "{{ mongodb_exporter_systemd_unit }}"
+  notify:
+    - reload mongodb_exporter unit
+    - restart mongodb_exporter service
+
+- name: ensure that configuration directory exists
+  file:
+    path: "{{ mongodb_exporter_dirs.config_dir }}"
+    state: directory
+
+- name: create exporter configuration file
+  template:
+    src: exporter-cfg.j2
+    dest: "{{ mongodb_exporter_dirs.config_dir }}/{{ mongodb_exporter_config_file }}"
+    owner: root
+    group: "{{ mongodb_exporter_user_name }}"
+    mode: 0640
+  notify: restart mongodb_exporter service
+
+- meta: flush_handlers
+
+- name: enable service
+  systemd:
+    name: "{{ mongodb_exporter_service_name }}"
+    enabled: true

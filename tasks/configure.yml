@@ -1,0 +1,15 @@
+---
+
+- name: create exporter configuration file
+  template:
+    src: exporter-cfg.j2
+    dest: "{{ mongodb_exporter_dirs.config_dir }}/{{ mongodb_exporter_config_file }}"
+    owner: root
+    group: "{{ mongodb_exporter_user_name }}"
+    mode: 0640
+  notify: restart mongodb_exporter service
+
+- name: Wait for port 9216
+  wait_for:
+    host: 0.0.0.0
+    port: 9216
